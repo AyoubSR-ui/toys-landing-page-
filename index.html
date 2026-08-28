@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لعبة اللمس التفاعلي — تعزف موسيقى عند اللمس</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<!-- ============================================================
+     META (FACEBOOK/INSTAGRAM) PIXEL
+     Replace YOUR_PIXEL_ID below with the SAME Pixel ID connected
+     in Shopify (Shopify admin → Settings → Customer events →
+     Facebook & Instagram). Using the same ID means Meta stitches
+     this page's events together with your Shopify checkout events
+     into one funnel in Ads Manager.
+     ============================================================ -->
+<script>
+  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+  n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+  document,'script','https://connect.facebook.net/en_US/fbevents.js');
+  const META_PIXEL_ID = '1558785505985427';
+  if(META_PIXEL_ID !== 'YOUR_PIXEL_ID'){
+    fbq('init', META_PIXEL_ID);
+    fbq('track', 'PageView');
+  }
+</script>
+<noscript><img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=1558785505985427&ev=PageView&noscript=1"
+/></noscript>
+<style>
+  :root{
+    --ink:#2B1B33;
+    --ink-soft:#5b4a66;
+    --cream:#FFF8ED;
+    --cream-2:#FFF1DC;
+    --banana:#FFD93D;
+    --banana-deep:#E8B800;
+    --strawberry:#FF5470;
+    --strawberry-deep:#E33A57;
+    --mango:#FF8C42;
+    --mango-deep:#E96F1F;
+    --leaf:#3FA66C;
+    --white:#FFFFFF;
+    --accent:var(--strawberry);
+    --accent-deep:var(--strawberry-deep);
+    --display: 'Lalezar', 'Cairo', sans-serif;
+    --body: 'Cairo', sans-serif;
+    --radius-lg: 32px;
+    --radius-md: 20px;
+    --radius-sm: 12px;
+    --shadow-soft: 0 20px 40px -12px rgba(43,27,51,0.18);
+    --shadow-pop: 0 10px 0 0 var(--accent-deep);
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    font-family:var(--body);
+    background:var(--cream);
+    color:var(--ink);
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  img{max-width:100%; display:block;}
+  button{font-family:inherit; cursor:pointer; border:none;}
+  a{color:inherit; text-decoration:none;}
+  ul{list-style:none;}
+  .wrap{max-width:1140px; margin:0 auto; padding:0 24px;}
+  :focus-visible{outline:3px solid var(--ink); outline-offset:3px;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+
+  /* ---------- Announcement bar ---------- */
+  .announce{
+    background:var(--ink);
+    color:var(--cream);
+    font-size:14px;
+    font-weight:600;
+    text-align:center;
+    padding:10px 16px;
+    letter-spacing:.3px;
+  }
+  .announce span{opacity:.55; margin:0 10px;}
+
+  /* ---------- Header ---------- */
+  header{
+    padding:22px 0 6px;
+  }
+  .header-row{display:flex; align-items:center; justify-content:space-between; gap:16px;}
+  .logo{
+    font-family:var(--display);
+    font-size:26px;
+    color:var(--ink);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .logo em{
+    font-style:normal;
+    background:var(--banana);
+    padding:2px 10px 4px;
+    border-radius:10px;
+    transform:rotate(-3deg);
+    display:inline-block;
+  }
+  .header-cta{
+    background:var(--accent);
+    color:var(--white);
+    font-weight:800;
+    font-size:14px;
+    padding:12px 22px;
+    border-radius:100px;
+    box-shadow:0 6px 0 var(--accent-deep);
+    transition:transform .15s ease, box-shadow .15s ease;
+    white-space:nowrap;
+  }
+  .header-cta:hover{transform:translateY(-2px);}
+  .header-cta:active{transform:translateY(3px); box-shadow:0 2px 0 var(--accent-deep);}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;
+    padding:56px 0 40px;
+    overflow:hidden;
+  }
+  .blob{
+    position:absolute;
+    border-radius:50%;
+    filter:blur(2px);
+    opacity:.55;
+    z-index:0;
+  }
+  .blob.b1{width:320px; height:320px; background:var(--banana); top:-90px; right:-90px; opacity:.5;}
+  .blob.b2{width:220px; height:220px; background:var(--mango); bottom:-60px; left:-60px; opacity:.4;}
+  .blob.b3{width:120px; height:120px; background:var(--strawberry); top:40%; left:6%; opacity:.25;}
+
+  .hero-grid{
+    position:relative;
+    z-index:1;
+    display:grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap:40px;
+    align-items:center;
+  }
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    background:var(--white);
+    border:2px solid var(--ink);
+    color:var(--ink);
+    font-weight:700;
+    font-size:13px;
+    padding:7px 16px;
+    border-radius:100px;
+    margin-bottom:18px;
+  }
+  .eyebrow .dot{width:8px; height:8px; border-radius:50%; background:var(--leaf); box-shadow:0 0 0 4px rgba(63,166,108,.2);}
+
+  .hero h1{
+    font-family:var(--display);
+    font-size:clamp(38px, 5.4vw, 62px);
+    line-height:1.12;
+    color:var(--ink);
+    margin-bottom:18px;
+  }
+  .hero h1 .hl{
+    color:var(--strawberry);
+    position:relative;
+    white-space:nowrap;
+  }
+  .hero p.lead{
+    font-size:18px;
+    line-height:1.9;
+    color:var(--ink-soft);
+    max-width:520px;
+    margin-bottom:26px;
+    font-weight:500;
+  }
+  .hero-ctas{display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:28px;}
+  .btn-main{
+    background:var(--strawberry);
+    color:var(--white);
+    font-weight:800;
+    font-size:18px;
+    padding:18px 34px;
+    border-radius:100px;
+    box-shadow:0 8px 0 var(--strawberry-deep);
+    transition:transform .15s ease, box-shadow .15s ease;
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+  }
+  .btn-main:hover{transform:translateY(-3px);}
+  .btn-main:active{transform:translateY(4px); box-shadow:0 3px 0 var(--strawberry-deep);}
+  .price-badge{
+    font-family:var(--display);
+    font-size:20px;
+    color:var(--ink);
+  }
+  .price-badge s{color:#b6a9bd; margin-inline-start:8px; font-size:15px; font-family:var(--body);}
+
+  .trust-row{display:flex; gap:20px; flex-wrap:wrap; font-size:14px; font-weight:700; color:var(--ink-soft);}
+  .trust-row li{display:flex; align-items:center; gap:6px;}
+
+  /* Hero interactive stage */
+  .stage{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:420px;
+  }
+  .stage-ring{
+    position:absolute;
+    width:360px; height:360px;
+    border-radius:50%;
+    background: radial-gradient(circle at 50% 40%, var(--cream-2), transparent 70%);
+    border:3px dashed rgba(43,27,51,0.15);
+    animation: spin 40s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg);} }
+  .stage-img-wrap{
+    position:relative;
+    width:280px; height:280px;
+    border-radius:50%;
+    background:var(--white);
+    box-shadow:var(--shadow-soft);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    user-select:none;
+    touch-action:manipulation;
+    transition: transform .12s ease;
+    border:6px solid var(--white);
+    outline:6px solid var(--accent);
+    outline-offset:-2px;
+  }
+  .stage-img-wrap:active{transform:scale(.96);}
+  .stage-img-wrap img{
+    width:82%; height:82%; object-fit:contain;
+    filter:drop-shadow(0 14px 18px rgba(43,27,51,.25));
+  }
+  .tap-hint{
+    position:absolute;
+    bottom:-6px;
+    background:var(--ink);
+    color:var(--cream);
+    font-size:13px;
+    font-weight:700;
+    padding:8px 16px;
+    border-radius:100px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    animation: bob 1.8s ease-in-out infinite;
+    pointer-events:none;
+  }
+  @keyframes bob{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(-6px);} }
+
+  .note{
+    position:absolute;
+    font-size:22px;
+    pointer-events:none;
+    opacity:0;
+    z-index:5;
+  }
+  @keyframes float-note{
+    0%{ opacity:0; transform:translate(0,0) scale(.6) rotate(0deg); }
+    12%{ opacity:1; }
+    100%{ opacity:0; transform:translate(var(--dx), -170px) scale(1.15) rotate(var(--rot)); }
+  }
+
+  /* Variant thumbs under stage */
+  .variant-picker{
+    position:relative;
+    display:flex;
+    gap:14px;
+    margin-top:26px;
+    justify-content:center;
+  }
+  .vchip{
+    width:64px; height:64px;
+    border-radius:18px;
+    background:var(--white);
+    border:3px solid transparent;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:8px;
+    box-shadow:0 4px 0 rgba(43,27,51,.08);
+    transition:border-color .15s ease, transform .15s ease;
+  }
+  .vchip img{width:100%; height:100%; object-fit:contain;}
+  .vchip.active{border-color:var(--ink); transform:translateY(-3px);}
+
+  /* ---------- Section heading ---------- */
+  .section{padding:76px 0;}
+  .section-head{text-align:center; max-width:640px; margin:0 auto 46px;}
+  .section-eyebrow{
+    font-family:var(--display);
+    color:var(--accent);
+    font-size:16px;
+    letter-spacing:.5px;
+    margin-bottom:10px;
+    display:block;
+  }
+  .section-head h2{
+    font-family:var(--display);
+    font-size:clamp(28px, 3.6vw, 40px);
+    line-height:1.25;
+    color:var(--ink);
+    margin-bottom:12px;
+  }
+  .section-head p{font-size:16px; color:var(--ink-soft); line-height:1.8; font-weight:500;}
+
+  /* ---------- Variants showcase ---------- */
+  .variants-band{background:var(--white);}
+  .variant-cards{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:24px;
+  }
+  .vcard{
+    background:var(--cream);
+    border-radius:var(--radius-lg);
+    padding:28px 22px 26px;
+    text-align:center;
+    position:relative;
+    transition:transform .2s ease;
+    border:3px solid transparent;
+  }
+  .vcard:hover{transform:translateY(-6px);}
+  .vcard .tag{
+    position:absolute; top:16px; inset-inline-start:16px;
+    font-size:12px; font-weight:800;
+    background:var(--ink); color:var(--cream);
+    padding:5px 12px; border-radius:100px;
+  }
+  .vcard .frame{
+    width:100%; aspect-ratio:1/1;
+    background:var(--white);
+    border-radius:24px;
+    display:flex; align-items:center; justify-content:center;
+    margin-bottom:18px;
+    box-shadow:0 10px 24px -10px rgba(43,27,51,.18);
+  }
+  .vcard .frame img{width:70%; height:70%; object-fit:contain;}
+  .vcard h3{font-family:var(--display); font-size:22px; margin-bottom:6px;}
+  .vcard p{font-size:14px; color:var(--ink-soft); font-weight:600;}
+  .vcard.banana .frame{background:linear-gradient(160deg, #FFF6D6, #ffffff);}
+  .vcard.strawberry .frame{background:linear-gradient(160deg, #FFE1E6, #ffffff);}
+  .vcard.mango .frame{background:linear-gradient(160deg, #FFE7D2, #ffffff);}
+
+  /* ---------- How it works ---------- */
+  .how{position:relative;}
+  .how-steps{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:28px;
+    counter-reset:step;
+  }
+  .how-step{
+    position:relative;
+    background:var(--white);
+    border-radius:var(--radius-md);
+    padding:32px 24px 26px;
+    box-shadow:var(--shadow-soft);
+  }
+  .how-step .num{
+    font-family:var(--display);
+    font-size:44px;
+    color:var(--banana);
+    -webkit-text-stroke:2px var(--ink);
+    line-height:1;
+    margin-bottom:14px;
+  }
+  .how-step h3{font-size:18px; font-weight:800; margin-bottom:8px;}
+  .how-step p{font-size:14.5px; color:var(--ink-soft); line-height:1.8; font-weight:500;}
+  .how-arrow{
+    position:absolute; top:50%; left:-24px; transform:translateY(-50%);
+    font-size:22px; color:var(--ink); opacity:.25;
+  }
+  [dir="rtl"] .how-arrow{left:auto; right:-24px; transform:translateY(-50%) scaleX(-1);}
+
+  /* ---------- Features ---------- */
+  .features-band{background:var(--ink); color:var(--cream);}
+  .features-band .section-head h2{color:var(--cream);}
+  .features-band .section-head p{color:#cdb9d8;}
+  .features-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:18px;
+  }
+  .feature{
+    background:rgba(255,248,237,0.06);
+    border:1px solid rgba(255,248,237,0.14);
+    border-radius:var(--radius-md);
+    padding:24px 20px;
+    display:flex;
+    gap:14px;
+    align-items:flex-start;
+  }
+  .feature .icon{
+    flex:0 0 auto;
+    width:46px; height:46px;
+    border-radius:14px;
+    background:var(--banana);
+    color:var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px;
+  }
+  .feature h3{font-size:16px; font-weight:800; margin-bottom:4px;}
+  .feature p{font-size:13.5px; color:#cdb9d8; line-height:1.7; font-weight:500;}
+
+  /* ---------- Trust badges ---------- */
+  .badges{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:16px;
+  }
+  .badge{
+    text-align:center;
+    padding:22px 12px;
+    background:var(--white);
+    border-radius:var(--radius-md);
+    box-shadow:0 6px 20px -10px rgba(43,27,51,.15);
+  }
+  .badge .emoji{font-size:30px; margin-bottom:8px;}
+  .badge h4{font-size:14.5px; font-weight:800; margin-bottom:4px;}
+  .badge p{font-size:12.5px; color:var(--ink-soft); font-weight:600;}
+
+  /* ---------- Order form ---------- */
+  .order-band{
+    background:linear-gradient(180deg, var(--cream-2), var(--cream));
+  }
+  .order-shell{
+    background:var(--white);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-soft);
+    display:grid;
+    grid-template-columns:0.85fr 1.15fr;
+    overflow:hidden;
+  }
+  .order-visual{
+    background:linear-gradient(165deg, var(--strawberry), var(--mango));
+    padding:40px 32px;
+    color:var(--white);
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    position:relative;
+    overflow:hidden;
+  }
+  .order-visual h3{font-family:var(--display); font-size:28px; line-height:1.3; margin-bottom:14px;}
+  .order-visual p{font-size:14.5px; line-height:1.8; font-weight:600; opacity:.95; margin-bottom:20px;}
+  .order-visual .oimg{
+    width:170px; margin:0 auto;
+    filter:drop-shadow(0 16px 18px rgba(0,0,0,.25));
+    animation: sway 3.4s ease-in-out infinite;
+  }
+  @keyframes sway{ 0%,100%{transform:rotate(-3deg);} 50%{transform:rotate(3deg);} }
+  .order-visual ul{margin-top:22px; display:flex; flex-direction:column; gap:10px;}
+  .order-visual ul li{font-size:13.5px; font-weight:700; display:flex; align-items:center; gap:8px;}
+
+  .order-form{padding:36px 34px;}
+  .order-form h3{font-family:var(--display); font-size:24px; margin-bottom:6px;}
+  .order-form > p.sub{font-size:13.5px; color:var(--ink-soft); font-weight:600; margin-bottom:22px;}
+
+  .field{margin-bottom:16px;}
+  .field label{
+    display:block; font-size:13.5px; font-weight:800; margin-bottom:7px; color:var(--ink);
+  }
+  .field input, .field select{
+    width:100%;
+    padding:14px 16px;
+    border-radius:var(--radius-sm);
+    border:2px solid #ECE1D6;
+    background:var(--cream);
+    font-family:inherit;
+    font-size:15px;
+    font-weight:600;
+    color:var(--ink);
+    transition:border-color .15s ease;
+  }
+  .field input:focus, .field select:focus{border-color:var(--strawberry);}
+  .field-row{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+
+  .variant-select{display:flex; gap:10px;}
+  .variant-select button{
+    flex:1;
+    padding:12px 8px;
+    border-radius:var(--radius-sm);
+    background:var(--cream);
+    border:2px solid #ECE1D6;
+    font-weight:800;
+    font-size:13.5px;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    transition:all .15s ease;
+  }
+  .variant-select button img{width:30px; height:30px; object-fit:contain;}
+  .variant-select button.active{border-color:var(--ink); background:var(--banana);}
+
+  .qty-row{display:flex; align-items:center; gap:14px;}
+  .qty-control{
+    display:flex; align-items:center;
+    border:2px solid #ECE1D6;
+    border-radius:var(--radius-sm);
+    overflow:hidden;
+  }
+  .qty-control button{
+    width:42px; height:42px;
+    background:var(--cream);
+    font-size:20px; font-weight:800;
+    color:var(--ink);
+  }
+  .qty-control button:hover{background:var(--banana);}
+  .qty-control span{
+    width:44px; text-align:center; font-weight:800; font-size:16px;
+  }
+  .qty-note{font-size:12.5px; color:var(--leaf); font-weight:700;}
+
+  .order-total{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--cream);
+    border-radius:var(--radius-sm);
+    padding:16px 18px;
+    margin:18px 0;
+  }
+  .order-total .label{font-size:13.5px; font-weight:700; color:var(--ink-soft);}
+  .order-total .amount{font-family:var(--display); font-size:26px; color:var(--strawberry);}
+
+  .submit-btn{
+    width:100%;
+    background:var(--strawberry);
+    color:var(--white);
+    font-weight:800;
+    font-size:17px;
+    padding:17px;
+    border-radius:100px;
+    box-shadow:0 6px 0 var(--strawberry-deep);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .submit-btn:hover{transform:translateY(-2px);}
+  .submit-btn:active{transform:translateY(3px); box-shadow:0 2px 0 var(--strawberry-deep);}
+
+  .form-note{font-size:12px; color:var(--ink-soft); text-align:center; margin-top:12px; font-weight:600;}
+
+  .success-panel{
+    display:none;
+    text-align:center;
+    padding:30px 10px;
+  }
+  .success-panel .check{
+    width:70px; height:70px; border-radius:50%;
+    background:var(--leaf); color:var(--white);
+    display:flex; align-items:center; justify-content:center;
+    font-size:34px; margin:0 auto 18px;
+  }
+  .success-panel h3{font-family:var(--display); font-size:24px; margin-bottom:10px;}
+  .success-panel p{font-size:14.5px; color:var(--ink-soft); font-weight:600; line-height:1.8;}
+
+  /* ---------- Footer ---------- */
+  footer{background:var(--ink); color:#cdb9d8; padding:44px 0 26px;}
+  .footer-row{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; padding-bottom:26px; border-bottom:1px solid rgba(255,255,255,.1);}
+  .footer-logo{font-family:var(--display); font-size:22px; color:var(--cream);}
+  footer .fine{text-align:center; font-size:12.5px; margin-top:22px; opacity:.7;}
+
+  /* ---------- Sticky mobile CTA ---------- */
+  .sticky-cta{
+    position:fixed; bottom:0; inset-inline:0; z-index:50;
+    background:var(--white);
+    box-shadow:0 -8px 24px rgba(43,27,51,.15);
+    padding:12px 16px;
+    display:none;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+  }
+  .sticky-cta .p{font-family:var(--display); font-size:18px; color:var(--strawberry);}
+  .sticky-cta a{
+    background:var(--strawberry); color:var(--white); font-weight:800; font-size:14px;
+    padding:12px 22px; border-radius:100px; box-shadow:0 5px 0 var(--strawberry-deep);
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:920px){
+    .hero-grid{grid-template-columns:1fr; text-align:center;}
+    .hero p.lead{margin-inline:auto;}
+    .trust-row{justify-content:center;}
+    .hero-ctas{justify-content:center;}
+    .variant-cards{grid-template-columns:1fr; }
+    .how-steps{grid-template-columns:1fr;}
+    .how-arrow{display:none;}
+    .features-grid{grid-template-columns:1fr 1fr;}
+    .badges{grid-template-columns:1fr 1fr;}
+    .order-shell{grid-template-columns:1fr;}
+    .order-visual{padding:32px 26px;}
+    .field-row{grid-template-columns:1fr;}
+    .sticky-cta{display:flex;}
+    body{padding-bottom:70px;}
+  }
+  @media (max-width:560px){
+    .features-grid{grid-template-columns:1fr;}
+    .badges{grid-template-columns:1fr 1fr;}
+    .header-cta{display:none;}
+    .stage-img-wrap{width:230px; height:230px;}
+    .stage-ring{width:300px; height:300px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="announce">🚚 شحن سريع إلى جميع الولايات <span>|</span> 💵 الدفع عند الاستلام <span>|</span> 🎁 هدية مثالية للأطفال</div>
+
+<header>
+  <div class="wrap header-row">
+    <div class="logo">لمسة <em>الموسيقى</em> 🎵</div>
+    <a href="#order" class="header-cta">اطلب الآن</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow"><span class="dot"></span> لعبة تفاعلية لشخصين</span>
+      <h1>كل لمسة تتحوّل إلى <span class="hl">نغمة موسيقية</span> 🎶</h1>
+      <p class="lead">امسك أنت طرفًا، ويمسك صديقك الطرف الآخر — وبمجرد أن تلمسا بعضكما، يعزف البيانو الصغير المخبأ بالداخل نغمات مرحة. لحظات ضحك مضمونة لكل العائلة.</p>
+      <div class="hero-ctas">
+        <a href="#order" class="btn-main">🛒 اطلب الآن — الدفع عند الاستلام</a>
+        <div class="price-badge">2,000 دج <s>2,500 دج</s></div>
+      </div>
+      <ul class="trust-row">
+        <li>🏠 توصيل للمنزل 750 دج</li>
+        <li>🏢 Stop Desk 500 دج</li>
+        <li>🧸 قماش آمن للأطفال</li>
+      </ul>
+    </div>
+
+    <div class="stage">
+      <div class="stage-ring"></div>
+      <div class="stage-img-wrap" id="stage" role="button" tabindex="0" aria-label="اضغط لسماع الموسيقى">
+        <img id="stage-img" src="assets/strawberry.jpeg" alt="لعبة اللمس التفاعلي على شكل فراولة">
+        <span class="tap-hint" id="tapHint">👆 اضغط لسماع الموسيقى</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="variant-picker">
+      <button class="vchip active" data-variant="strawberry" data-img="assets/strawberry.jpeg" aria-label="فراولة"><img src="assets/strawberry.jpeg" alt=""></button>
+      <button class="vchip" data-variant="banana" data-img="assets/banana.jpeg" aria-label="موزة"><img src="assets/banana.jpeg" alt=""></button>
+      <button class="vchip" data-variant="mango" data-img="assets/mango.jpeg" aria-label="مانجو"><img src="assets/mango.jpeg" alt=""></button>
+    </div>
+  </div>
+</section>
+
+<section class="section variants-band" id="variants">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-eyebrow">ثلاثة أشكال كيوت</span>
+      <h2>اختر شخصيتك المفضّلة</h2>
+      <p>نفس المتعة، نفس الموسيقى — بثلاث شخصيات فواكه لطيفة يختارها طفلك.</p>
+    </div>
+    <div class="variant-cards">
+      <div class="vcard strawberry">
+        <span class="tag">🍓 الأكثر طلبًا</span>
+        <div class="frame"><img src="assets/strawberry.jpeg" alt="فراولة موسيقية"></div>
+        <h3>فراولة مرِحة</h3>
+        <p>وجه مبتسم يغمز — المفضّلة لدى البنات</p>
+      </div>
+      <div class="vcard banana">
+        <span class="tag">🍌 كلاسيكية</span>
+        <div class="frame"><img src="assets/banana.jpeg" alt="موزة موسيقية"></div>
+        <h3>موزة غاضبة قليلاً</h3>
+        <p>تعابير وجه مضحكة تُضحك الجميع</p>
+      </div>
+      <div class="vcard mango">
+        <span class="tag">🥭 جديدة</span>
+        <div class="frame"><img src="assets/mango.jpeg" alt="مانجو موسيقية"></div>
+        <h3>مانجو صغيرة</h3>
+        <p>تاج أخضر ظريف وعينان كبيرتان</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section how">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-eyebrow">بسيطة جدًا</span>
+      <h2>كيف تعمل اللعبة؟</h2>
+      <p>ثلاث خطوات فقط تفصلكم عن أول نغمة موسيقية وأول ضحكة.</p>
+    </div>
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="num">01</div>
+        <h3>كل شخص يمسك طرفًا</h3>
+        <p>أنت تمسك جهة، وصديقك أو أخوك الصغير يمسك الجهة الأخرى من اللعبة.</p>
+        <span class="how-arrow">→</span>
+      </div>
+      <div class="how-step">
+        <div class="num">02</div>
+        <h3>تلامسا بأي طريقة</h3>
+        <p>صافحا بعضكما، أو المسا يديكما — أي تلامس بسيط يكفي لتفعيل الدائرة.</p>
+        <span class="how-arrow">→</span>
+      </div>
+      <div class="how-step">
+        <div class="num">03</div>
+        <h3>استمتعا بالموسيقى</h3>
+        <p>يعزف البيانو الصغير نغمة فورية، وتبدأ الضحكات… جرّبا من يلمس أكثر!</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section features-band">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-eyebrow" style="color:var(--banana)">لماذا هذه اللعبة</span>
+      <h2>صُنعت لتجمع العائلة حول لحظة واحدة</h2>
+      <p>كل التفاصيل مدروسة لتكون تجربة ممتعة، آمنة، وسهلة الاستخدام.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature"><div class="icon">🎹</div><div><h3>تعزف عند اللمس</h3><p>بيانو مصغّر بالداخل يصدر نغمات فور تلامس الطرفين.</p></div></div>
+      <div class="feature"><div class="icon">👨‍👩‍👧‍👦</div><div><h3>لعبة لشخصين</h3><p>مصمَّمة خصيصًا ليلعب بها شخصان معًا في نفس الوقت.</p></div></div>
+      <div class="feature"><div class="icon">😂</div><div><h3>ضحك مضمون</h3><p>كل لمسة مفاجئة تتحوّل إلى لحظة مرح للجميع.</p></div></div>
+      <div class="feature"><div class="icon">🎉</div><div><h3>مثالية للحفلات</h3><p>رفيقة ممتازة للتجمعات العائلية وأعياد الميلاد.</p></div></div>
+      <div class="feature"><div class="icon">🧸</div><div><h3>قماش ناعم وآمن</h3><p>خامات طرية مختارة بعناية لتكون آمنة على بشرة الأطفال.</p></div></div>
+      <div class="feature"><div class="icon">🎁</div><div><h3>هدية رائعة</h3><p>مناسبة للأطفال والكبار، وتُغلَّف بشكل أنيق وجاهز للإهداء.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="badges">
+      <div class="badge"><div class="emoji">💵</div><h4>الدفع عند الاستلام</h4><p>ادفع فقط عند وصول الطلب</p></div>
+      <div class="badge"><div class="emoji">🚚</div><h4>شحن سريع</h4><p>إلى جميع ولايات الوطن</p></div>
+      <div class="badge"><div class="emoji">🔋</div><h4>سهلة الشحن</h4><p>قابلة لإعادة الاستخدام دائمًا</p></div>
+      <div class="badge"><div class="emoji">✅</div><h4>جودة مضمونة</h4><p>فحص دقيق قبل الشحن</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="shipping" style="padding-top:0;">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-eyebrow">التوصيل</span>
+      <h2>اختر طريقة التوصيل التي تناسبك</h2>
+      <p>يمكنك استلام طلبك في منزلك، أو عبر أقرب مكتب توصيل (Stop Desk) بسعر أقل.</p>
+    </div>
+    <div class="badges" style="grid-template-columns:repeat(2,1fr); max-width:640px; margin:0 auto;">
+      <div class="badge">
+        <div class="emoji">🏠</div>
+        <h4>التوصيل إلى المنزل</h4>
+        <p>يصلك الطلب إلى باب البيت</p>
+        <p style="font-family:var(--display); font-size:20px; color:var(--strawberry); margin-top:8px;">750 دج</p>
+      </div>
+      <div class="badge">
+        <div class="emoji">🏢</div>
+        <h4>التوصيل عبر المكتب (Stop Desk)</h4>
+        <p>تستلمه من أقرب مكتب توصيل</p>
+        <p style="font-family:var(--display); font-size:20px; color:var(--leaf); margin-top:8px;">500 دج</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section order-band" id="order">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="section-eyebrow">اطلب الآن</span>
+      <h2>أكمل طلبك في أقل من دقيقة</h2>
+      <p>املأ بياناتك وسنتصل بك لتأكيد الطلب — بدون أي دفع مسبق.</p>
+    </div>
+
+    <div class="order-shell">
+      <div class="order-visual">
+        <div>
+          <h3>لماذا تطلب الآن؟</h3>
+          <p>الكمية محدودة في هذا العرض، والتوصيل يشمل جميع الولايات مع إمكانية الدفع عند الاستلام.</p>
+        </div>
+        <img class="oimg" id="visual-img" src="assets/strawberry.jpeg" alt="">
+        <ul>
+          <li>✅ لا حاجة لبطاقة بنكية</li>
+          <li>✅ تدفع فقط عند الاستلام</li>
+          <li>✅ إمكانية الاستبدال عند وجود عيب</li>
+        </ul>
+      </div>
+
+      <div class="order-form">
+        <form id="orderForm">
+          <h3>معلومات الطلب</h3>
+          <p class="sub">جميع الحقول مطلوبة لتأكيد طلبك بسرعة.</p>
+
+          <div class="field">
+            <label for="fullname">الاسم الكامل</label>
+            <input id="fullname" type="text" placeholder="مثال: أمينة بلحاج" required>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="phone">رقم الهاتف</label>
+              <input id="phone" type="tel" placeholder="05XX XX XX XX" required pattern="[0-9+ ]{8,15}">
+            </div>
+            <div class="field">
+              <label for="wilaya">الولاية</label>
+              <select id="wilaya" required>
+                <option value="" disabled selected>اختر ولايتك</option>
+                <option value="01">01 - أدرار</option><option value="02">02 - الشلف</option><option value="03">03 - الأغواط</option><option value="04">04 - أم البواقي</option>
+                <option value="05">05 - باتنة</option><option value="06">06 - بجاية</option><option value="07">07 - بسكرة</option><option value="08">08 - بشار</option>
+                <option value="09">09 - البليدة</option><option value="10">10 - البويرة</option><option value="11">11 - تمنراست</option><option value="12">12 - تبسة</option>
+                <option value="13">13 - تلمسان</option><option value="14">14 - تيارت</option><option value="15">15 - تيزي وزو</option><option value="16">16 - الجزائر العاصمة</option>
+                <option value="17">17 - الجلفة</option><option value="18">18 - جيجل</option><option value="19">19 - سطيف</option><option value="20">20 - سعيدة</option>
+                <option value="21">21 - سكيكدة</option><option value="22">22 - سيدي بلعباس</option><option value="23">23 - عنابة</option><option value="24">24 - قالمة</option>
+                <option value="25">25 - قسنطينة</option><option value="26">26 - المدية</option><option value="27">27 - مستغانم</option><option value="28">28 - المسيلة</option>
+                <option value="29">29 - معسكر</option><option value="30">30 - ورقلة</option><option value="31">31 - وهران</option><option value="32">32 - البيض</option>
+                <option value="33">33 - إليزي</option><option value="34">34 - برج بوعريريج</option><option value="35">35 - بومرداس</option><option value="36">36 - الطارف</option>
+                <option value="37">37 - تندوف</option><option value="38">38 - تيسمسيلت</option><option value="39">39 - الوادي</option><option value="40">40 - خنشلة</option>
+                <option value="41">41 - سوق أهراس</option><option value="42">42 - تيبازة</option><option value="43">43 - ميلة</option><option value="44">44 - عين الدفلى</option>
+                <option value="45">45 - النعامة</option><option value="46">46 - عين تموشنت</option><option value="47">47 - غرداية</option><option value="48">48 - غليزان</option>
+                <option value="49">49 - تيميمون</option><option value="50">50 - برج باجي مختار</option><option value="51">51 - أولاد جلال</option><option value="52">52 - بني عباس</option>
+                <option value="53">53 - عين صالح</option><option value="54">54 - عين قزام</option><option value="55">55 - توقرت</option><option value="56">56 - جانت</option>
+                <option value="57">57 - المغير</option><option value="58">58 - المنيعة</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="address">العنوان بالتفصيل</label>
+            <input id="address" type="text" placeholder="الحي، الشارع، أقرب معلم" required>
+          </div>
+
+          <div class="field">
+            <label>الشكل المطلوب</label>
+            <div class="variant-select">
+              <button type="button" class="active" data-v="strawberry" data-img="assets/strawberry.jpeg"><img src="assets/strawberry.jpeg" alt="">فراولة</button>
+              <button type="button" data-v="banana" data-img="assets/banana.jpeg"><img src="assets/banana.jpeg" alt="">موزة</button>
+              <button type="button" data-v="mango" data-img="assets/mango.jpeg"><img src="assets/mango.jpeg" alt="">مانجو</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>الكمية</label>
+            <div class="qty-row">
+              <div class="qty-control">
+                <button type="button" id="qtyMinus" aria-label="إنقاص الكمية">−</button>
+                <span id="qtyVal">1</span>
+                <button type="button" id="qtyPlus" aria-label="زيادة الكمية">+</button>
+              </div>
+              <span class="qty-note" id="qtyNote"></span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>طريقة التوصيل</label>
+            <div class="variant-select" id="shippingSelect">
+              <button type="button" class="active" data-ship="750" data-label="التوصيل للمنزل">🏠 للمنزل<br><span style="font-weight:700;">750 دج</span></button>
+              <button type="button" data-ship="500" data-label="Stop Desk">🏢 المكتب<br><span style="font-weight:700;">500 دج</span></button>
+            </div>
+          </div>
+
+          <div class="order-total">
+            <span class="label">المجموع الكلي (مع التوصيل)</span>
+            <span class="amount" id="totalAmount">2,750 دج</span>
+          </div>
+
+          <button type="submit" class="submit-btn">✅ تأكيد الطلب — الدفع عند الاستلام</button>
+          <p class="form-note">🔒 بياناتك محفوظة ولن تُستخدم إلا لتأكيد طلبك وتوصيله.</p>
+        </form>
+
+        <div class="success-panel" id="successPanel">
+          <div class="check">✓</div>
+          <h3>تم استلام طلبك بنجاح!</h3>
+          <p>سيتصل بك أحد ممثلينا خلال وقت قصير لتأكيد الطلب. شكرًا لثقتك بنا 💛</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-row">
+      <div class="footer-logo">لمسة الموسيقى 🎵</div>
+      <ul class="trust-row" style="color:#cdb9d8;">
+        <li>💵 الدفع عند الاستلام</li>
+        <li>🚚 توصيل 58 ولاية</li>
+        <li>📞 خدمة زبائن سريعة</li>
+      </ul>
+    </div>
+    <p class="fine">© 2026 لمسة الموسيقى. جميع الحقوق محفوظة. هذا التصميم نموذج أولي — يُرجى تحديث السعر ووسائل التواصل قبل النشر.</p>
+  </div>
+</footer>
+
+<div class="sticky-cta">
+  <span class="p">2,000 دج</span>
+  <a href="#order">اطلب الآن 🛒</a>
+</div>
+
+<script>
+  function pixel(eventName, data){
+    if(typeof fbq === 'function' && META_PIXEL_ID !== 'YOUR_PIXEL_ID'){
+      fbq('track', eventName, data || {});
+    }
+  }
+
+  const images = {
+    strawberry: 'assets/strawberry.jpeg',
+    banana: 'assets/banana.jpeg',
+    mango: 'assets/mango.jpeg'
+  };
+  const names = { strawberry: 'فراولة', banana: 'موزة', mango: 'مانجو' };
+
+  const stage = document.getElementById('stage');
+  const stageImg = document.getElementById('stage-img');
+  const visualImg = document.getElementById('visual-img');
+  const tapHint = document.getElementById('tapHint');
+  const vchips = document.querySelectorAll('.vchip');
+  const formVariantBtns = document.querySelectorAll('.variant-select button');
+
+  function setVariant(key){
+    stageImg.src = images[key];
+    visualImg.src = images[key];
+    vchips.forEach(c => c.classList.toggle('active', c.dataset.variant === key));
+    formVariantBtns.forEach(b => b.classList.toggle('active', b.dataset.v === key));
+  }
+
+  vchips.forEach(chip => {
+    chip.addEventListener('click', () => setVariant(chip.dataset.variant));
+  });
+  formVariantBtns.forEach(btn => {
+    btn.addEventListener('click', () => setVariant(btn.dataset.v));
+  });
+
+  // Tiny toy-piano sound engine (Web Audio API — no external audio files needed)
+  let audioCtx;
+  function getAudioCtx(){
+    if(!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function playPianoNote(freq, startTime, duration){
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc2.type = 'sine';
+    osc.frequency.setValueAtTime(freq, startTime);
+    osc2.frequency.setValueAtTime(freq * 2, startTime); // octave overtone for a brighter "toy piano" timbre
+    const peak = 0.22;
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(peak, startTime + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+    osc.connect(gain);
+    osc2.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(startTime);
+    osc2.start(startTime);
+    osc.stop(startTime + duration);
+    osc2.stop(startTime + duration);
+  }
+  function playTapMelody(){
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    // a cheerful little C-major arpeggio, like the toy's built-in piano
+    const scale = [261.63, 329.63, 392.00, 523.25, 659.25]; // C4 E4 G4 C5 E5
+    const notes = [];
+    const count = 3 + Math.floor(Math.random() * 3); // 3-5 notes per tap
+    for(let i = 0; i < count; i++){
+      notes.push(scale[Math.floor(Math.random() * scale.length)]);
+    }
+    notes.forEach((freq, i) => {
+      playPianoNote(freq, now + i * 0.11, 0.5);
+    });
+  }
+
+  // Musical note burst on tap — the product's signature interaction
+  const noteSymbols = ['♪','♫','♩','♬'];
+  function burstNotes(){
+    playTapMelody();
+    const rect = stage.getBoundingClientRect();
+    for(let i=0;i<6;i++){
+      const note = document.createElement('span');
+      note.className = 'note';
+      note.textContent = noteSymbols[Math.floor(Math.random()*noteSymbols.length)];
+      const hue = ['#FF5470','#FF8C42','#FFD93D','#3FA66C'][i % 4];
+      note.style.color = hue;
+      const startX = rect.width/2 + (Math.random()*60-30);
+      const startY = rect.height/2 + (Math.random()*20-10);
+      note.style.left = startX + 'px';
+      note.style.top = startY + 'px';
+      const dx = (Math.random()*160-80) + 'px';
+      const rot = (Math.random()*60-30) + 'deg';
+      note.style.setProperty('--dx', dx);
+      note.style.setProperty('--rot', rot);
+      note.style.animation = 'float-note ' + (0.9 + Math.random()*0.5) + 's ease-out forwards';
+      stage.appendChild(note);
+      setTimeout(()=> note.remove(), 1600);
+    }
+    stage.style.transform = 'scale(0.95)';
+    setTimeout(()=> stage.style.transform = 'scale(1)', 140);
+    if(tapHint) tapHint.style.display = 'none';
+  }
+  stage.addEventListener('click', burstNotes);
+  stage.addEventListener('keypress', (e) => { if(e.key === 'Enter' || e.key === ' ') burstNotes(); });
+
+  // Quantity + price logic
+  const price = 2000;
+  let qty = 1;
+  let shippingCost = 750;
+  let shippingLabel = 'التوصيل للمنزل';
+  const qtyVal = document.getElementById('qtyVal');
+  const totalAmount = document.getElementById('totalAmount');
+  const qtyNote = document.getElementById('qtyNote');
+
+  // Product view — fires once everything above is ready
+  pixel('ViewContent', {
+    content_name: 'لعبة اللمس التفاعلي - ' + names[currentVariant],
+    content_ids: [currentVariant],
+    content_type: 'product',
+    value: price,
+    currency: 'DZD'
+  });
+
+  document.querySelectorAll('#shippingSelect button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#shippingSelect button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      shippingCost = parseInt(btn.dataset.ship, 10);
+      shippingLabel = btn.dataset.label;
+      updateTotal();
+    });
+  });
+
+  function updateTotal(){
+    let unit = price;
+    let note = '';
+    if(qty >= 3){ unit = 1700; note = '🎉 وفّرت 900 دج مع طلب 3 قطع'; }
+    else if(qty === 2){ unit = 1850; note = '🎉 وفّرت 300 دج مع طلب قطعتين'; }
+    qtyVal.textContent = qty;
+    totalAmount.textContent = (unit*qty + shippingCost).toLocaleString('en-US') + ' دج';
+    qtyNote.textContent = note;
+  }
+  document.getElementById('qtyPlus').addEventListener('click', () => { qty = Math.min(qty+1, 10); updateTotal(); firePixelAddToCart(); });
+  document.getElementById('qtyMinus').addEventListener('click', () => { qty = Math.max(qty-1, 1); updateTotal(); firePixelAddToCart(); });
+  formVariantBtns.forEach(btn => btn.addEventListener('click', firePixelAddToCart));
+
+  let addToCartFired = false;
+  function firePixelAddToCart(){
+    if(addToCartFired) return; // fire once per session, first meaningful interaction
+    addToCartFired = true;
+    pixel('AddToCart', {
+      content_name: 'لعبة اللمس التفاعلي - ' + names[currentVariant],
+      content_ids: [currentVariant],
+      content_type: 'product',
+      value: price * qty,
+      currency: 'DZD'
+    });
+  }
+  updateTotal();
+
+  // ============================================================
+  // SHOPIFY CONFIG — fill these in to send orders to your store
+  // ============================================================
+  // 1. SHOPIFY_STORE_DOMAIN: your store's *.myshopify.com domain
+  //    (Shopify admin → Settings → Domains)
+  // 2. VARIANT_IDS: the numeric variant ID for each fruit shape.
+  //    Get it from: Shopify admin → Products → open the product →
+  //    click the variant → copy the number at the end of the URL
+  //    (e.g. .../variants/42345678901234 → the ID is 42345678901234)
+  const SHOPIFY_STORE_DOMAIN = 'ay10i3-ha.myshopify.com';
+  const VARIANT_IDS = {
+    strawberry: '48488634089666',
+    mango:      '48488634056898',
+    banana:     '48488634122434'
+  };
+  const shopifyConfigured = !SHOPIFY_STORE_DOMAIN.startsWith('YOUR-STORE')
+    && !Object.values(VARIANT_IDS).some(v => v.startsWith('REPLACE_'));
+
+  let currentVariant = 'strawberry';
+  vchips.forEach(chip => chip.addEventListener('click', () => currentVariant = chip.dataset.variant));
+  formVariantBtns.forEach(btn => btn.addEventListener('click', () => currentVariant = btn.dataset.v));
+
+  // Form submit
+  document.getElementById('orderForm').addEventListener('submit', function(e){
+    e.preventDefault();
+
+    const name = document.getElementById('fullname').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    const wilayaSelect = document.getElementById('wilaya');
+    const wilaya = wilayaSelect.options[wilayaSelect.selectedIndex]?.text || '';
+    const address = document.getElementById('address').value.trim();
+
+    const totalValue = (qty >= 3 ? 1700 : qty === 2 ? 1850 : price) * qty + shippingCost;
+
+    // Fire before navigating away, so the event has time to send
+    pixel('InitiateCheckout', {
+      content_name: 'لعبة اللمس التفاعلي - ' + names[currentVariant],
+      content_ids: [currentVariant],
+      content_type: 'product',
+      num_items: qty,
+      value: totalValue,
+      currency: 'DZD'
+    });
+    pixel('Lead', {
+      content_name: 'طلب COD - ' + names[currentVariant],
+      value: totalValue,
+      currency: 'DZD'
+    });
+
+    if(shopifyConfigured){
+      // Sends the shopper straight to their Shopify cart with the right
+      // variant + quantity, and stores their COD details as cart attributes
+      // so they appear on the order in Shopify (and in FlashManager).
+      const variantId = VARIANT_IDS[currentVariant];
+      const params = new URLSearchParams({
+        'attributes[الاسم]': name,
+        'attributes[الهاتف]': phone,
+        'attributes[الولاية]': wilaya,
+        'attributes[العنوان]': address,
+        'attributes[الشكل]': names[currentVariant],
+        'attributes[طريقة التوصيل]': shippingLabel + ' (' + shippingCost + ' دج)'
+      });
+      const url = `https://${SHOPIFY_STORE_DOMAIN}/cart/${variantId}:${qty}?${params.toString()}`;
+      // Small delay so the pixel request has a moment to leave before we navigate
+      setTimeout(() => { window.location.href = url; }, 250);
+      return;
+    }
+
+    // Demo mode (no Shopify config yet) — just show the confirmation panel
+    this.style.display = 'none';
+    document.querySelector('.order-form h3').style.display='none';
+    document.querySelector('.order-form > p.sub').style.display='none';
+    document.getElementById('successPanel').style.display = 'block';
+  });
+</script>
+
+</body>
+</html>
