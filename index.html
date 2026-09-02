@@ -921,6 +921,7 @@
     mango: 'mango.jpeg'
   };
   const names = { strawberry: 'فراولة', banana: 'موزة', mango: 'مانجو' };
+  let currentVariant = 'strawberry';
 
   const stage = document.getElementById('stage');
   const stageImg = document.getElementById('stage-img');
@@ -1091,7 +1092,6 @@
   const shopifyConfigured = !SHOPIFY_STORE_DOMAIN.startsWith('YOUR-STORE')
     && !Object.values(VARIANT_IDS).some(v => v.startsWith('REPLACE_'));
 
-  let currentVariant = 'strawberry';
   vchips.forEach(chip => chip.addEventListener('click', () => currentVariant = chip.dataset.variant));
   formVariantBtns.forEach(btn => btn.addEventListener('click', () => currentVariant = btn.dataset.v));
 
