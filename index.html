@@ -1123,21 +1123,38 @@
     });
 
     if(shopifyConfigured){
-      // Sends the shopper straight to their Shopify cart with the right
-      // variant + quantity, and stores their COD details as cart attributes
-      // so they appear on the order in Shopify (and in FlashManager).
+      // Submits a real form POST to Shopify's /cart/add endpoint (the
+      // officially documented way to add line-item properties), then jumps
+      // straight to checkout via return_to. More reliable than building a
+      // permalink URL with query-string attributes.
       const variantId = VARIANT_IDS[currentVariant];
-      const params = new URLSearchParams({
-        'attributes[الاسم]': name,
-        'attributes[الهاتف]': phone,
-        'attributes[الولاية]': wilaya,
-        'attributes[العنوان]': address,
-        'attributes[الشكل]': names[currentVariant],
-        'attributes[طريقة التوصيل]': shippingLabel + ' (' + shippingCost + ' دج)'
-      });
-      const url = `https://${SHOPIFY_STORE_DOMAIN}/cart/${variantId}:${qty}?${params.toString()}`;
-      // Small delay so the pixel request has a moment to leave before we navigate
-      setTimeout(() => { window.location.href = url; }, 250);
+      const props = {
+        'الاسم': name,
+        'الهاتف': phone,
+        'الولاية': wilaya,
+        'العنوان': address,
+        'الشكل': names[currentVariant],
+        'طريقة التوصيل': shippingLabel + ' (' + shippingCost + ' دج)'
+      };
+      setTimeout(() => {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `https://${SHOPIFY_STORE_DOMAIN}/cart/add`;
+        form.style.display = 'none';
+        function addField(fieldName, value){
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = fieldName;
+          input.value = value;
+          form.appendChild(input);
+        }
+        addField('id', variantId);
+        addField('quantity', qty);
+        addField('return_to', '/checkout');
+        Object.entries(props).forEach(([key, val]) => addField('properties[' + key + ']', val));
+        document.body.appendChild(form);
+        form.submit();
+      }, 250);
       return;
     }
 
