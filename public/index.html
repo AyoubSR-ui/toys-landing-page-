@@ -837,6 +837,11 @@
           </div>
 
           <div class="field">
+            <label for="city">البلدية / المدينة</label>
+            <input id="city" type="text" placeholder="مثال: باب الزوار" required>
+          </div>
+
+          <div class="field">
             <label for="address">العنوان بالتفصيل</label>
             <input id="address" type="text" placeholder="الحي، الشارع، أقرب معلم" required>
           </div>
@@ -1103,6 +1108,7 @@
     const phone = document.getElementById('phone').value.trim();
     const wilayaSelect = document.getElementById('wilaya');
     const wilaya = wilayaSelect.options[wilayaSelect.selectedIndex]?.text || '';
+    const city = document.getElementById('city').value.trim();
     const address = document.getElementById('address').value.trim();
 
     const totalValue = (qty >= 3 ? 1700 : qty === 2 ? 1850 : price) * qty + shippingCost;
@@ -1123,8 +1129,8 @@
     });
 
     // Sends the order to our own backend, which creates the order directly
-    // in Shopify via the Admin API. The customer never has to touch
-    // Shopify's own checkout screen or re-enter their details.
+    // in FlashManager via its Orders API. The customer never has to touch
+    // any external checkout screen or re-enter their details.
     const submitBtn = this.querySelector('.submit-btn');
     const originalBtnText = submitBtn.textContent;
     submitBtn.disabled = true;
@@ -1136,7 +1142,7 @@
       const response = await fetch('/api/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, wilaya, address, variant: currentVariant, qty, shipping: shippingKey })
+        body: JSON.stringify({ name, phone, wilaya, city, address, variant: currentVariant, qty, shipping: shippingKey })
       });
       const result = await response.json();
 

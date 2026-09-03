@@ -1,7 +1,7 @@
 // Backend for the لعبة اللمس التفاعلي landing page.
-// Serves the static site AND creates real Shopify draft orders via the
-// Admin API, so the customer's order lands directly in Shopify without
-// ever seeing Shopify's own checkout screen.
+// Serves the static site AND creates real orders in FlashManager via its
+// Orders API, so the customer's order lands directly in your COD pipeline
+// (and syncs to Shopify from there) without any checkout screen at all.
 
 import express from 'express';
 import path from 'path';
@@ -15,23 +15,19 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================================
-// CONFIG — set these as Railway environment variables, NOT here.
+// CONFIG — set this as a Railway environment variable, NOT here.
 // ============================================================
-// SHOPIFY_STORE_DOMAIN   e.g. ay10i3-ha.myshopify.com
-// SHOPIFY_ADMIN_TOKEN    Admin API access token from your custom app
-//                        (Shopify admin → Settings → Apps and sales
-//                        channels → Develop apps → your app → API
-//                        credentials). Needs the write_draft_orders scope.
-const SHOPIFY_STORE_DOMAIN = process.env.SHOPIFY_STORE_DOMAIN;
-const SHOPIFY_ADMIN_TOKEN = process.env.SHOPIFY_ADMIN_TOKEN;
-const SHOPIFY_API_VERSION = '2024-10';
+// FLASHMANAGER_API_KEY   your fm_live_... key from FlashManager's API keys
+//                        page (Account → API keys).
+const FLASHMANAGER_API_KEY = (process.env.FLASHMANAGER_API_KEY || '').trim();
+const FLASHMANAGER_BASE_URL = 'https://api.flash-manager.com/v1';
 
-// Server holds the source of truth for variant IDs, names, and pricing —
-// never trust price/variant data sent from the browser.
+// Server holds the source of truth for SKUs, names, and pricing —
+// never trust price/product data sent from the browser.
 const VARIANTS = {
-  strawberry: { id: 48488634089666, name: 'فراولة' },
-  mango:      { id: 48488634056898, name: 'مانجو' },
-  banana:     { id: 48488634122434, name: 'موزة' }
+  strawberry: { sku: 'TOY-STR', name: 'فراولة', title: 'لعبة اللمس التفاعلي - فراولة' },
+  mango:      { sku: 'TOY-MAN', name: 'مانجو',  title: 'لعبة اللمس التفاعلي - مانجو' },
+  banana:     { sku: 'TOY-BAN', name: 'موزة',   title: 'لعبة اللمس التفاعلي - موزة' }
 };
 const UNIT_PRICE = { 1: 2000, 2: 1850 }; // per-unit price by quantity tier; 3+ uses the value below
 const UNIT_PRICE_3PLUS = 1700;
@@ -47,13 +43,13 @@ function unitPriceFor(qty) {
 
 app.post('/api/order', async (req, res) => {
   try {
-    if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_ADMIN_TOKEN) {
-      return res.status(500).json({ ok: false, error: 'الخادم غير مهيأ بعد (متغيرات Shopify مفقودة).' });
+    if (!FLASHMANAGER_API_KEY) {
+      return res.status(500).json({ ok: false, error: 'الخادم غير مهيأ بعد (مفتاح FlashManager مفقود).' });
     }
 
-    const { name, phone, wilaya, address, variant, qty, shipping } = req.body || {};
+    const { name, phone, wilaya, city, address, variant, qty, shipping } = req.body || {};
 
-    if (!name || !phone || !wilaya || !address || !variant || !qty || !shipping) {
+    if (!name || !phone || !wilaya || !city || !address || !variant || !qty || !shipping) {
       return res.status(400).json({ ok: false, error: 'جميع الحقول مطلوبة.' });
     }
     if (!VARIANTS[variant]) {
@@ -68,63 +64,43 @@ app.post('/api/order', async (req, res) => {
     const chosenShipping = SHIPPING[shipping];
     const unitPrice = unitPriceFor(quantity);
 
-    const draftOrderPayload = {
-      draft_order: {
-        line_items: [
-          {
-            variant_id: chosenVariant.id,
-            quantity,
-            price: unitPrice.toFixed(2)
-          }
-        ],
-        shipping_line: {
-          title: chosenShipping.label,
-          price: chosenShipping.cost.toFixed(2)
-        },
-        shipping_address: {
-          first_name: name,
-          phone,
-          address1: address,
-          city: wilaya,
-          country: 'DZ'
-        },
-        note: `طلب دفع عند الاستلام — ${chosenShipping.label} (${chosenShipping.cost} دج)`,
-        note_attributes: [
-          { name: 'الاسم', value: name },
-          { name: 'الهاتف', value: phone },
-          { name: 'الولاية', value: wilaya },
-          { name: 'العنوان', value: address },
-          { name: 'الشكل', value: chosenVariant.name },
-          { name: 'طريقة التوصيل', value: `${chosenShipping.label} (${chosenShipping.cost} دج)` }
-        ],
-        tags: 'COD, لعبة اللمس التفاعلي',
-        use_customer_default_address: false
-      }
+    const orderPayload = {
+      customer_name: name,
+      customer_phone: phone,
+      province: wilaya,
+      city,
+      address, // full street/landmark detail beyond city, kept for the delivery agent
+      line_items: [
+        {
+          title: chosenVariant.title,
+          sku: chosenVariant.sku,
+          quantity,
+          price: unitPrice
+        }
+      ],
+      shipping_price: chosenShipping.cost,
+      shipping_method: chosenShipping.label
     };
 
-    const shopifyRes = await fetch(
-      `https://${SHOPIFY_STORE_DOMAIN}/admin/api/${SHOPIFY_API_VERSION}/draft_orders.json`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Shopify-Access-Token': SHOPIFY_ADMIN_TOKEN
-        },
-        body: JSON.stringify(draftOrderPayload)
-      }
-    );
+    const fmRes = await fetch(`${FLASHMANAGER_BASE_URL}/orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': FLASHMANAGER_API_KEY
+      },
+      body: JSON.stringify(orderPayload)
+    });
 
-    const data = await shopifyRes.json();
+    const data = await fmRes.json();
 
-    if (!shopifyRes.ok) {
-      console.error('Shopify error:', data);
-      return res.status(502).json({ ok: false, error: 'تعذر إنشاء الطلب في Shopify.', details: data });
+    if (!fmRes.ok) {
+      console.error('FlashManager error:', data);
+      return res.status(502).json({ ok: false, error: 'تعذر إنشاء الطلب في FlashManager.', details: data });
     }
 
     return res.json({
       ok: true,
-      orderName: data.draft_order?.name || null,
-      orderId: data.draft_order?.id || null
+      orderId: data.id || data.order_id || null
     });
   } catch (err) {
     console.error(err);
