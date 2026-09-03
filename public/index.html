@@ -471,7 +471,7 @@
 
   .order-form{padding:36px 34px;}
   .order-form h3{font-family:var(--display); font-size:24px; margin-bottom:6px;}
-  .order-form > p.sub{font-size:13.5px; color:var(--ink-soft); font-weight:600; margin-bottom:22px;}
+  .order-form p.sub{font-size:13.5px; color:var(--ink-soft); font-weight:600; margin-bottom:22px;}
 
   .field{margin-bottom:16px;}
   .field label{
@@ -567,6 +567,17 @@
   .submit-btn:active{transform:translateY(3px); box-shadow:0 2px 0 var(--strawberry-deep);}
 
   .form-note{font-size:12px; color:var(--ink-soft); text-align:center; margin-top:12px; font-weight:600;}
+  .order-error{
+    background:#FFEAEC;
+    border:2px solid var(--strawberry);
+    color:var(--strawberry-deep);
+    font-weight:700;
+    font-size:14px;
+    padding:12px 16px;
+    border-radius:var(--radius-sm);
+    margin-bottom:14px;
+    text-align:center;
+  }
 
   .success-panel{
     display:none;
@@ -815,7 +826,7 @@
       </div>
 
       <div class="order-form">
-        <form id="orderForm">
+        <form id="orderForm" autocomplete="off">
           <h3>معلومات الطلب</h3>
           <p class="sub">جميع الحقول مطلوبة لتأكيد طلبك بسرعة.</p>
 
@@ -908,6 +919,8 @@
             <span class="label">المجموع الكلي (مع التوصيل)</span>
             <span class="amount" id="totalAmount">2,750 دج</span>
           </div>
+
+          <div id="orderErrorMsg" class="order-error" style="display:none;"></div>
 
           <button type="submit" class="submit-btn">✅ تأكيد الطلب — الدفع عند الاستلام</button>
           <p class="form-note">🔒 بياناتك محفوظة ولن تستخدم إلا لتأكيد طلبك وتوصيله.</p>
@@ -1143,6 +1156,16 @@
 
   updateTotal();
 
+  const orderErrorMsg = document.getElementById('orderErrorMsg');
+  function showOrderError(msg){
+    orderErrorMsg.textContent = msg;
+    orderErrorMsg.style.display = 'block';
+    orderErrorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  function hideOrderError(){
+    orderErrorMsg.style.display = 'none';
+  }
+
   // Form submit
   // One idempotency key per page load, reused on every retry of this form
   // so a resubmission after a network hiccup can never create a duplicate
@@ -1156,9 +1179,10 @@
 
     const items = selectedItems();
     if(items.length === 0){
-      alert('الرجاء اختيار قطعة واحدة على الأقل (فراولة، موزة أو مانجو).');
+      showOrderError('الرجاء اختيار قطعة واحدة على الأقل (فراولة، موزة أو مانجو).');
       return;
     }
+    hideOrderError();
 
     const name = document.getElementById('fullname').value.trim();
     const phone = document.getElementById('phone').value.trim();
@@ -1197,30 +1221,42 @@
     const shippingKey = document.querySelector('#shippingSelect button.active')?.dataset.shipKey || 'home';
     const orderBody = JSON.stringify({ name, phone, wilaya, city, address, items, shipping: shippingKey, idempotencyKey: orderIdempotencyKey });
 
-    // Sends the request, retrying once automatically on a network-level
-    // failure. This is always safe: every attempt carries the same
-    // idempotencyKey, so a retry after a hiccup can never create a
-    // duplicate order — the backend just returns the original result.
-    async function sendOrder(){
-      return fetch('/api/order', {
+    // Sends the request, retrying once automatically if ANYTHING in the
+    // attempt fails — the network request itself, OR reading/parsing the
+    // response body (which is the more likely culprit: the server can
+    // finish and log a clean 200 while the browser still fails to receive
+    // the full response body over a flaky connection). This is always
+    // safe: every attempt carries the same idempotencyKey, so a retry
+    // after a hiccup can never create a duplicate order — the backend
+    // just returns the original result instead of calling FlashManager again.
+    async function attemptOrder(){
+      const response = await fetch('/api/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: orderBody
       });
+      let result;
+      try {
+        result = await response.json();
+      } catch(parseErr){
+        const rawText = await response.clone().text().catch(() => '(could not read body)');
+        console.error('Failed to parse order response as JSON. Status:', response.status, 'Body:', rawText);
+        throw parseErr;
+      }
+      return { response, result };
     }
 
     try {
-      let response;
+      let response, result;
       try {
-        response = await sendOrder();
-      } catch(networkErr){
-        console.warn('Order request failed, retrying once...', networkErr);
-        response = await sendOrder();
+        ({ response, result } = await attemptOrder());
+      } catch(firstErr){
+        console.warn('Order attempt failed, retrying once...', firstErr);
+        ({ response, result } = await attemptOrder());
       }
-      const result = await response.json();
 
       if(!response.ok || !result.ok){
-        alert(result.error || 'حدث خطأ أثناء إرسال الطلب. حاول مرة أخرى.');
+        showOrderError(result.error || 'حدث خطأ أثناء إرسال الطلب. حاول مرة أخرى.');
         submitBtn.disabled = false;
         submitBtn.textContent = originalBtnText;
         return;
@@ -1228,11 +1264,11 @@
 
       this.style.display = 'none';
       document.querySelector('.order-form h3').style.display='none';
-      document.querySelector('.order-form > p.sub').style.display='none';
+      document.querySelector('.order-form p.sub').style.display='none';
       document.getElementById('successPanel').style.display = 'block';
     } catch(err){
-      console.error(err);
-      alert('تعذر الاتصال بالخادم. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.');
+      console.error('Order submission failed after retry:', err);
+      showOrderError('تعذر الاتصال بالخادم. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.');
       submitBtn.disabled = false;
       submitBtn.textContent = originalBtnText;
     }
