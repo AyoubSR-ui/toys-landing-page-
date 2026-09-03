@@ -1195,13 +1195,28 @@
     submitBtn.textContent = 'جاري إرسال الطلب...';
 
     const shippingKey = document.querySelector('#shippingSelect button.active')?.dataset.shipKey || 'home';
+    const orderBody = JSON.stringify({ name, phone, wilaya, city, address, items, shipping: shippingKey, idempotencyKey: orderIdempotencyKey });
 
-    try {
-      const response = await fetch('/api/order', {
+    // Sends the request, retrying once automatically on a network-level
+    // failure. This is always safe: every attempt carries the same
+    // idempotencyKey, so a retry after a hiccup can never create a
+    // duplicate order — the backend just returns the original result.
+    async function sendOrder(){
+      return fetch('/api/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, wilaya, city, address, items, shipping: shippingKey, idempotencyKey: orderIdempotencyKey })
+        body: orderBody
       });
+    }
+
+    try {
+      let response;
+      try {
+        response = await sendOrder();
+      } catch(networkErr){
+        console.warn('Order request failed, retrying once...', networkErr);
+        response = await sendOrder();
+      }
       const result = await response.json();
 
       if(!response.ok || !result.ok){
