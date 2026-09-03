@@ -1101,6 +1101,13 @@
   formVariantBtns.forEach(btn => btn.addEventListener('click', () => currentVariant = btn.dataset.v));
 
   // Form submit
+  // One idempotency key per page load, reused on every retry of this form
+  // so a resubmission after a network hiccup can never create a duplicate
+  // order — the backend recognizes the same key and returns the original result.
+  const orderIdempotencyKey = (window.crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+
   document.getElementById('orderForm').addEventListener('submit', async function(e){
     e.preventDefault();
 
@@ -1142,7 +1149,7 @@
       const response = await fetch('/api/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, wilaya, city, address, variant: currentVariant, qty, shipping: shippingKey })
+        body: JSON.stringify({ name, phone, wilaya, city, address, variant: currentVariant, qty, shipping: shippingKey, idempotencyKey: orderIdempotencyKey })
       });
       const result = await response.json();
 
