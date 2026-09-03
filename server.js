@@ -123,22 +123,40 @@ app.post('/api/order', async (req, res) => {
     const discount = discountFor(totalQuantity);
     const chosenShipping = SHIPPING[shipping];
 
-    const lineItems = normalizedItems.map(({ variant, qty }) => ({
-      title: VARIANTS[variant].title,
-      sku: VARIANTS[variant].sku,
-      quantity: qty,
-      price: UNIT_PRICE
-    }));
-    if (discount > 0) {
-      // Represented as a negative-price line item since the API has no
-      // dedicated discount field — keeps the order total accurate.
-      lineItems.push({
-        title: 'خصم على الكمية',
-        sku: 'DISCOUNT',
-        quantity: 1,
-        price: -discount
-      });
-    }
+    // FlashManager rejects negative line-item prices, so instead of a
+    // separate "discount" line, we peel one unit off and apply the
+    // (capped, always < UNIT_PRICE) discount directly to that single
+    // unit's price. The order total still comes out exactly right.
+    const lineItems = [];
+    let discountRemaining = discount;
+    normalizedItems.forEach(({ variant, qty }) => {
+      if (discountRemaining > 0) {
+        const discountedUnitPrice = Math.max(0, UNIT_PRICE - discountRemaining);
+        const appliedDiscount = UNIT_PRICE - discountedUnitPrice;
+        lineItems.push({
+          title: VARIANTS[variant].title,
+          sku: VARIANTS[variant].sku,
+          quantity: 1,
+          price: discountedUnitPrice
+        });
+        discountRemaining -= appliedDiscount;
+        if (qty > 1) {
+          lineItems.push({
+            title: VARIANTS[variant].title,
+            sku: VARIANTS[variant].sku,
+            quantity: qty - 1,
+            price: UNIT_PRICE
+          });
+        }
+      } else {
+        lineItems.push({
+          title: VARIANTS[variant].title,
+          sku: VARIANTS[variant].sku,
+          quantity: qty,
+          price: UNIT_PRICE
+        });
+      }
+    });
 
     const orderPayload = {
       customer_name: name,
