@@ -848,7 +848,7 @@
 
           <div class="field">
             <label>الشكل المطلوب</label>
-            <div class="variant-select">
+            <div class="variant-select" id="shapeSelect">
               <button type="button" class="active" data-v="strawberry" data-img="assets/strawberry.jpeg"><img src="assets/strawberry.jpeg" alt="">فراولة</button>
               <button type="button" data-v="banana" data-img="assets/banana.jpeg"><img src="assets/banana.jpeg" alt="">موزة</button>
               <button type="button" data-v="mango" data-img="assets/mango.jpeg"><img src="assets/mango.jpeg" alt="">مانجو</button>
@@ -933,7 +933,7 @@
   const visualImg = document.getElementById('visual-img');
   const tapHint = document.getElementById('tapHint');
   const vchips = document.querySelectorAll('.vchip');
-  const formVariantBtns = document.querySelectorAll('.variant-select button');
+  const formVariantBtns = document.querySelectorAll('#shapeSelect button');
 
   function setVariant(key){
     stageImg.src = images[key];
