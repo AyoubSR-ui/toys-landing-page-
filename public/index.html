@@ -1068,6 +1068,13 @@
       .filter(([, n]) => n > 0)
       .map(([variant, n]) => ({ variant, qty: n }));
   }
+  // Flat discount, capped — not per-unit: 100 دج off for 2 pieces,
+  // 200 دج off (max) for 3 or more pieces.
+  function discountFor(units){
+    if(units >= 3) return 200;
+    if(units === 2) return 100;
+    return 0;
+  }
 
   // Product view — fires once everything above is ready
   pixel('ViewContent', {
@@ -1090,11 +1097,11 @@
 
   function updateTotal(){
     const units = totalUnits();
-    let unit = price;
+    const discount = discountFor(units);
     let note = '';
-    if(units >= 3){ unit = 1700; note = '🎉 وفرت ' + ((price - 1700) * units).toLocaleString('en-US') + ' دج مع طلب ' + units + ' قطع'; }
-    else if(units === 2){ unit = 1850; note = '🎉 وفرت ' + ((price - 1850) * units).toLocaleString('en-US') + ' دج مع طلب قطعتين'; }
-    totalAmount.textContent = (unit*units + shippingCost).toLocaleString('en-US') + ' دج';
+    if(units === 2){ note = '🎉 وفرت 100 دج مع طلب قطعتين'; }
+    else if(units >= 3){ note = '🎉 وفرت 200 دج مع طلب 3 قطع أو أكثر'; }
+    totalAmount.textContent = (price*units - discount + shippingCost).toLocaleString('en-US') + ' دج';
     qtyNote.textContent = note;
   }
 
@@ -1161,8 +1168,7 @@
     const address = document.getElementById('address').value.trim();
 
     const units = totalUnits();
-    const unitPrice = units >= 3 ? 1700 : units === 2 ? 1850 : price;
-    const totalValue = unitPrice * units + shippingCost;
+    const totalValue = price * units - discountFor(units) + shippingCost;
     const itemsSummary = items.map(i => names[i.variant] + ' × ' + i.qty).join(' + ');
 
     // Fire before navigating away, so the event has time to send

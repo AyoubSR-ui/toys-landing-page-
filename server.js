@@ -29,16 +29,18 @@ const VARIANTS = {
   mango:      { sku: 'TOY-MAN', name: 'مانجو',  title: 'لعبة اللمس التفاعلي - مانجو' },
   banana:     { sku: 'TOY-BAN', name: 'موزة',   title: 'لعبة اللمس التفاعلي - موزة' }
 };
-const UNIT_PRICE = { 1: 2000, 2: 1850 }; // per-unit price by quantity tier; 3+ uses the value below
-const UNIT_PRICE_3PLUS = 1700;
+const UNIT_PRICE = 2000; // fixed price per piece, regardless of flavor mix
 const SHIPPING = {
   home:      { label: 'التوصيل للمنزل', cost: 750 },
   stopdesk:  { label: 'Stop Desk', cost: 500 }
 };
 
-function unitPriceFor(qty) {
-  if (qty >= 3) return UNIT_PRICE_3PLUS;
-  return UNIT_PRICE[qty] || UNIT_PRICE[1];
+// Flat discount, capped — not a per-unit price change: 100 دج off for 2
+// pieces total, 200 دج off (max) for 3 or more pieces total.
+function discountFor(totalQty) {
+  if (totalQty >= 3) return 200;
+  if (totalQty === 2) return 100;
+  return 0;
 }
 
 // ============================================================
@@ -118,8 +120,25 @@ app.post('/api/order', async (req, res) => {
     }
 
     const totalQuantity = normalizedItems.reduce((sum, i) => sum + i.qty, 0);
-    const unitPrice = unitPriceFor(totalQuantity);
+    const discount = discountFor(totalQuantity);
     const chosenShipping = SHIPPING[shipping];
+
+    const lineItems = normalizedItems.map(({ variant, qty }) => ({
+      title: VARIANTS[variant].title,
+      sku: VARIANTS[variant].sku,
+      quantity: qty,
+      price: UNIT_PRICE
+    }));
+    if (discount > 0) {
+      // Represented as a negative-price line item since the API has no
+      // dedicated discount field — keeps the order total accurate.
+      lineItems.push({
+        title: 'خصم على الكمية',
+        sku: 'DISCOUNT',
+        quantity: 1,
+        price: -discount
+      });
+    }
 
     const orderPayload = {
       customer_name: name,
@@ -127,12 +146,7 @@ app.post('/api/order', async (req, res) => {
       province: wilaya,
       city,
       address, // full street/landmark detail beyond city, kept for the delivery agent
-      line_items: normalizedItems.map(({ variant, qty }) => ({
-        title: VARIANTS[variant].title,
-        sku: VARIANTS[variant].sku,
-        quantity: qty,
-        price: unitPrice
-      })),
+      line_items: lineItems,
       shipping_price: chosenShipping.cost,
       shipping_method: chosenShipping.label
     };
