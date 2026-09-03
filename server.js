@@ -60,6 +60,14 @@ function cleanupIdempotencyCache() {
   }
 }
 
+function cacheAndSend(res, idempotencyKey, httpStatus, body) {
+  const result = { httpStatus, body };
+  if (idempotencyKey) {
+    idempotencyCache.set(idempotencyKey, { status: 'done', result, expiresAt: Date.now() + IDEMPOTENCY_TTL_MS });
+  }
+  return res.status(httpStatus).json(body);
+}
+
 app.post('/api/order', async (req, res) => {
   const idempotencyKey = (req.body && req.body.idempotencyKey || '').trim();
 
@@ -85,28 +93,33 @@ app.post('/api/order', async (req, res) => {
       idempotencyCache.set(idempotencyKey, { status: 'pending', expiresAt: Date.now() + IDEMPOTENCY_TTL_MS });
     }
 
-    const { name, phone, wilaya, city, address, variant, qty, shipping } = req.body || {};
+    const { name, phone, wilaya, city, address, items, shipping } = req.body || {};
 
-    if (!name || !phone || !wilaya || !city || !address || !variant || !qty || !shipping) {
-      const result = { httpStatus: 400, body: { ok: false, error: 'جميع الحقول مطلوبة.' } };
-      if (idempotencyKey) idempotencyCache.set(idempotencyKey, { status: 'done', result, expiresAt: Date.now() + IDEMPOTENCY_TTL_MS });
-      return res.status(result.httpStatus).json(result.body);
-    }
-    if (!VARIANTS[variant]) {
-      const result = { httpStatus: 400, body: { ok: false, error: 'الشكل المطلوب غير صالح.' } };
-      if (idempotencyKey) idempotencyCache.set(idempotencyKey, { status: 'done', result, expiresAt: Date.now() + IDEMPOTENCY_TTL_MS });
-      return res.status(result.httpStatus).json(result.body);
+    if (!name || !phone || !wilaya || !city || !address || !shipping || !Array.isArray(items) || items.length === 0) {
+      return cacheAndSend(res, idempotencyKey, 400, { ok: false, error: 'جميع الحقول مطلوبة، ويجب اختيار قطعة واحدة على الأقل.' });
     }
     if (!SHIPPING[shipping]) {
-      const result = { httpStatus: 400, body: { ok: false, error: 'طريقة التوصيل غير صالحة.' } };
-      if (idempotencyKey) idempotencyCache.set(idempotencyKey, { status: 'done', result, expiresAt: Date.now() + IDEMPOTENCY_TTL_MS });
-      return res.status(result.httpStatus).json(result.body);
+      return cacheAndSend(res, idempotencyKey, 400, { ok: false, error: 'طريقة التوصيل غير صالحة.' });
     }
-    const quantity = Math.max(1, Math.min(10, parseInt(qty, 10) || 1));
 
-    const chosenVariant = VARIANTS[variant];
+    // Validate and normalize every requested line item — never trust
+    // quantities or variant keys sent from the browser beyond this point.
+    const normalizedItems = [];
+    for (const raw of items) {
+      const variantKey = raw && raw.variant;
+      if (!VARIANTS[variantKey]) {
+        return cacheAndSend(res, idempotencyKey, 400, { ok: false, error: 'أحد الأشكال المطلوبة غير صالح.' });
+      }
+      const qty = Math.max(1, Math.min(10, parseInt(raw.qty, 10) || 0));
+      if (qty < 1) {
+        return cacheAndSend(res, idempotencyKey, 400, { ok: false, error: 'الكمية يجب أن تكون قطعة واحدة على الأقل لكل شكل.' });
+      }
+      normalizedItems.push({ variant: variantKey, qty });
+    }
+
+    const totalQuantity = normalizedItems.reduce((sum, i) => sum + i.qty, 0);
+    const unitPrice = unitPriceFor(totalQuantity);
     const chosenShipping = SHIPPING[shipping];
-    const unitPrice = unitPriceFor(quantity);
 
     const orderPayload = {
       customer_name: name,
@@ -114,14 +127,12 @@ app.post('/api/order', async (req, res) => {
       province: wilaya,
       city,
       address, // full street/landmark detail beyond city, kept for the delivery agent
-      line_items: [
-        {
-          title: chosenVariant.title,
-          sku: chosenVariant.sku,
-          quantity,
-          price: unitPrice
-        }
-      ],
+      line_items: normalizedItems.map(({ variant, qty }) => ({
+        title: VARIANTS[variant].title,
+        sku: VARIANTS[variant].sku,
+        quantity: qty,
+        price: unitPrice
+      })),
       shipping_price: chosenShipping.cost,
       shipping_method: chosenShipping.label
     };
@@ -139,14 +150,10 @@ app.post('/api/order', async (req, res) => {
 
     if (!fmRes.ok) {
       console.error('FlashManager error:', data);
-      const result = { httpStatus: 502, body: { ok: false, error: 'تعذر إنشاء الطلب في FlashManager.', details: data } };
-      if (idempotencyKey) idempotencyCache.set(idempotencyKey, { status: 'done', result, expiresAt: Date.now() + IDEMPOTENCY_TTL_MS });
-      return res.status(result.httpStatus).json(result.body);
+      return cacheAndSend(res, idempotencyKey, 502, { ok: false, error: 'تعذر إنشاء الطلب في FlashManager.', details: data });
     }
 
-    const result = { httpStatus: 200, body: { ok: true, orderId: data.id || data.order_id || null } };
-    if (idempotencyKey) idempotencyCache.set(idempotencyKey, { status: 'done', result, expiresAt: Date.now() + IDEMPOTENCY_TTL_MS });
-    return res.json(result.body);
+    return cacheAndSend(res, idempotencyKey, 200, { ok: true, orderId: data.id || data.order_id || null });
   } catch (err) {
     console.error(err);
     if (idempotencyKey) idempotencyCache.delete(idempotencyKey); // allow retry — we don't know if FlashManager actually got the order

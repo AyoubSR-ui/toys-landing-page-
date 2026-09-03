@@ -524,7 +524,23 @@
   .qty-control span{
     width:44px; text-align:center; font-weight:800; font-size:16px;
   }
-  .qty-note{font-size:12.5px; color:var(--leaf); font-weight:700;}
+  .qty-note{font-size:12.5px; color:var(--leaf); font-weight:700; display:block; margin-top:10px;}
+
+  .cart-rows{display:flex; flex-direction:column; gap:10px;}
+  .cart-row{
+    display:flex; align-items:center; gap:12px;
+    border:2px solid #ECE1D6;
+    border-radius:var(--radius-sm);
+    padding:10px 12px;
+    background:var(--cream);
+    transition:border-color .15s ease;
+  }
+  .cart-row.has-qty{border-color:var(--ink);}
+  .cart-row img{width:38px; height:38px; object-fit:contain; border-radius:8px; background:var(--white); flex:0 0 auto;}
+  .cart-row-name{flex:1; font-weight:800; font-size:14.5px; color:var(--ink);}
+  .cart-row .qty-control{flex:0 0 auto;}
+  .cart-row .qty-control button{width:36px; height:36px; font-size:18px;}
+  .cart-row .qty-control span{width:32px; font-size:15px;}
 
   .order-total{
     display:flex; align-items:center; justify-content:space-between;
@@ -847,24 +863,37 @@
           </div>
 
           <div class="field">
-            <label>الشكل المطلوب</label>
-            <div class="variant-select" id="shapeSelect">
-              <button type="button" class="active" data-v="strawberry" data-img="assets/strawberry.jpeg"><img src="assets/strawberry.jpeg" alt="">فراولة</button>
-              <button type="button" data-v="banana" data-img="assets/banana.jpeg"><img src="assets/banana.jpeg" alt="">موزة</button>
-              <button type="button" data-v="mango" data-img="assets/mango.jpeg"><img src="assets/mango.jpeg" alt="">مانجو</button>
-            </div>
-          </div>
-
-          <div class="field">
-            <label>الكمية</label>
-            <div class="qty-row">
-              <div class="qty-control">
-                <button type="button" id="qtyMinus" aria-label="إنقاص الكمية">−</button>
-                <span id="qtyVal">1</span>
-                <button type="button" id="qtyPlus" aria-label="زيادة الكمية">+</button>
+            <label>اختر الأشكال والكمية (يمكنك مزج أكثر من شكل)</label>
+            <div class="cart-rows" id="cartRows">
+              <div class="cart-row" data-v="strawberry">
+                <img src="assets/strawberry.jpeg" alt="فراولة">
+                <span class="cart-row-name">فراولة</span>
+                <div class="qty-control">
+                  <button type="button" class="cart-minus" aria-label="إنقاص فراولة">−</button>
+                  <span class="cart-qty-val">1</span>
+                  <button type="button" class="cart-plus" aria-label="زيادة فراولة">+</button>
+                </div>
               </div>
-              <span class="qty-note" id="qtyNote"></span>
+              <div class="cart-row" data-v="banana">
+                <img src="assets/banana.jpeg" alt="موزة">
+                <span class="cart-row-name">موزة</span>
+                <div class="qty-control">
+                  <button type="button" class="cart-minus" aria-label="إنقاص موزة">−</button>
+                  <span class="cart-qty-val">0</span>
+                  <button type="button" class="cart-plus" aria-label="زيادة موزة">+</button>
+                </div>
+              </div>
+              <div class="cart-row" data-v="mango">
+                <img src="assets/mango.jpeg" alt="مانجو">
+                <span class="cart-row-name">مانجو</span>
+                <div class="qty-control">
+                  <button type="button" class="cart-minus" aria-label="إنقاص مانجو">−</button>
+                  <span class="cart-qty-val">0</span>
+                  <button type="button" class="cart-plus" aria-label="زيادة مانجو">+</button>
+                </div>
+              </div>
             </div>
+            <span class="qty-note" id="qtyNote"></span>
           </div>
 
           <div class="field">
@@ -926,28 +955,24 @@
     mango: 'assets/mango.jpeg'
   };
   const names = { strawberry: 'فراولة', banana: 'موزة', mango: 'مانجو' };
-  let currentVariant = 'strawberry';
 
+  // The hero "tap to hear music" preview is just decorative — it shows
+  // whichever shape the visitor last tapped up top, independent of what
+  // they actually put in their order below.
+  let previewVariant = 'strawberry';
   const stage = document.getElementById('stage');
   const stageImg = document.getElementById('stage-img');
   const visualImg = document.getElementById('visual-img');
   const tapHint = document.getElementById('tapHint');
   const vchips = document.querySelectorAll('.vchip');
-  const formVariantBtns = document.querySelectorAll('#shapeSelect button');
 
-  function setVariant(key){
+  function setPreview(key){
+    previewVariant = key;
     stageImg.src = images[key];
     visualImg.src = images[key];
     vchips.forEach(c => c.classList.toggle('active', c.dataset.variant === key));
-    formVariantBtns.forEach(b => b.classList.toggle('active', b.dataset.v === key));
   }
-
-  vchips.forEach(chip => {
-    chip.addEventListener('click', () => setVariant(chip.dataset.variant));
-  });
-  formVariantBtns.forEach(btn => {
-    btn.addEventListener('click', () => setVariant(btn.dataset.v));
-  });
+  vchips.forEach(chip => chip.addEventListener('click', () => setPreview(chip.dataset.variant)));
 
   // Tiny toy-piano sound engine (Web Audio API — no external audio files needed)
   let audioCtx;
@@ -1024,19 +1049,30 @@
   stage.addEventListener('click', burstNotes);
   stage.addEventListener('keypress', (e) => { if(e.key === 'Enter' || e.key === ' ') burstNotes(); });
 
-  // Quantity + price logic
+  // ============================================================
+  // CART — customers can now mix flavors (e.g. 1 banana + 1 strawberry)
+  // instead of picking a single shape.
+  // ============================================================
   const price = 2000;
-  let qty = 1;
   let shippingCost = 750;
   let shippingLabel = 'التوصيل للمنزل';
-  const qtyVal = document.getElementById('qtyVal');
   const totalAmount = document.getElementById('totalAmount');
   const qtyNote = document.getElementById('qtyNote');
+  const cartQty = { strawberry: 1, banana: 0, mango: 0 }; // starts with 1 strawberry, matching the old default
+
+  function totalUnits(){
+    return Object.values(cartQty).reduce((sum, n) => sum + n, 0);
+  }
+  function selectedItems(){
+    return Object.entries(cartQty)
+      .filter(([, n]) => n > 0)
+      .map(([variant, n]) => ({ variant, qty: n }));
+  }
 
   // Product view — fires once everything above is ready
   pixel('ViewContent', {
-    content_name: 'لعبة اللمس التفاعلي - ' + names[currentVariant],
-    content_ids: [currentVariant],
+    content_name: 'لعبة اللمس التفاعلي - ' + names[previewVariant],
+    content_ids: [previewVariant],
     content_type: 'product',
     value: price,
     currency: 'DZD'
@@ -1053,52 +1089,52 @@
   });
 
   function updateTotal(){
+    const units = totalUnits();
     let unit = price;
     let note = '';
-    if(qty >= 3){ unit = 1700; note = '🎉 وفرت 900 دج مع طلب 3 قطع'; }
-    else if(qty === 2){ unit = 1850; note = '🎉 وفرت 300 دج مع طلب قطعتين'; }
-    qtyVal.textContent = qty;
-    totalAmount.textContent = (unit*qty + shippingCost).toLocaleString('en-US') + ' دج';
+    if(units >= 3){ unit = 1700; note = '🎉 وفرت ' + ((price - 1700) * units).toLocaleString('en-US') + ' دج مع طلب ' + units + ' قطع'; }
+    else if(units === 2){ unit = 1850; note = '🎉 وفرت ' + ((price - 1850) * units).toLocaleString('en-US') + ' دج مع طلب قطعتين'; }
+    totalAmount.textContent = (unit*units + shippingCost).toLocaleString('en-US') + ' دج';
     qtyNote.textContent = note;
   }
-  document.getElementById('qtyPlus').addEventListener('click', () => { qty = Math.min(qty+1, 10); updateTotal(); firePixelAddToCart(); });
-  document.getElementById('qtyMinus').addEventListener('click', () => { qty = Math.max(qty-1, 1); updateTotal(); firePixelAddToCart(); });
-  formVariantBtns.forEach(btn => btn.addEventListener('click', firePixelAddToCart));
 
   let addToCartFired = false;
   function firePixelAddToCart(){
     if(addToCartFired) return; // fire once per session, first meaningful interaction
     addToCartFired = true;
+    const items = selectedItems();
     pixel('AddToCart', {
-      content_name: 'لعبة اللمس التفاعلي - ' + names[currentVariant],
-      content_ids: [currentVariant],
+      content_name: 'لعبة اللمس التفاعلي - ' + items.map(i => names[i.variant]).join(' + '),
+      content_ids: items.map(i => i.variant),
       content_type: 'product',
-      value: price * qty,
+      value: price * totalUnits(),
       currency: 'DZD'
     });
   }
+
+  document.querySelectorAll('.cart-row').forEach(row => {
+    const variant = row.dataset.v;
+    const valEl = row.querySelector('.cart-qty-val');
+    function syncRow(){
+      valEl.textContent = cartQty[variant];
+      row.classList.toggle('has-qty', cartQty[variant] > 0);
+    }
+    row.querySelector('.cart-plus').addEventListener('click', () => {
+      cartQty[variant] = Math.min(cartQty[variant] + 1, 10);
+      syncRow();
+      updateTotal();
+      firePixelAddToCart();
+    });
+    row.querySelector('.cart-minus').addEventListener('click', () => {
+      cartQty[variant] = Math.max(cartQty[variant] - 1, 0);
+      syncRow();
+      updateTotal();
+      firePixelAddToCart();
+    });
+    syncRow();
+  });
+
   updateTotal();
-
-  // ============================================================
-  // SHOPIFY CONFIG — fill these in to send orders to your store
-  // ============================================================
-  // 1. SHOPIFY_STORE_DOMAIN: your store's *.myshopify.com domain
-  //    (Shopify admin → Settings → Domains)
-  // 2. VARIANT_IDS: the numeric variant ID for each fruit shape.
-  //    Get it from: Shopify admin → Products → open the product →
-  //    click the variant → copy the number at the end of the URL
-  //    (e.g. .../variants/42345678901234 → the ID is 42345678901234)
-  const SHOPIFY_STORE_DOMAIN = 'ay10i3-ha.myshopify.com';
-  const VARIANT_IDS = {
-    strawberry: '48488634089666',
-    mango:      '48488634056898',
-    banana:     '48488634122434'
-  };
-  const shopifyConfigured = !SHOPIFY_STORE_DOMAIN.startsWith('YOUR-STORE')
-    && !Object.values(VARIANT_IDS).some(v => v.startsWith('REPLACE_'));
-
-  vchips.forEach(chip => chip.addEventListener('click', () => currentVariant = chip.dataset.variant));
-  formVariantBtns.forEach(btn => btn.addEventListener('click', () => currentVariant = btn.dataset.v));
 
   // Form submit
   // One idempotency key per page load, reused on every retry of this form
@@ -1111,6 +1147,12 @@
   document.getElementById('orderForm').addEventListener('submit', async function(e){
     e.preventDefault();
 
+    const items = selectedItems();
+    if(items.length === 0){
+      alert('الرجاء اختيار قطعة واحدة على الأقل (فراولة، موزة أو مانجو).');
+      return;
+    }
+
     const name = document.getElementById('fullname').value.trim();
     const phone = document.getElementById('phone').value.trim();
     const wilayaSelect = document.getElementById('wilaya');
@@ -1118,19 +1160,22 @@
     const city = document.getElementById('city').value.trim();
     const address = document.getElementById('address').value.trim();
 
-    const totalValue = (qty >= 3 ? 1700 : qty === 2 ? 1850 : price) * qty + shippingCost;
+    const units = totalUnits();
+    const unitPrice = units >= 3 ? 1700 : units === 2 ? 1850 : price;
+    const totalValue = unitPrice * units + shippingCost;
+    const itemsSummary = items.map(i => names[i.variant] + ' × ' + i.qty).join(' + ');
 
     // Fire before navigating away, so the event has time to send
     pixel('InitiateCheckout', {
-      content_name: 'لعبة اللمس التفاعلي - ' + names[currentVariant],
-      content_ids: [currentVariant],
+      content_name: 'لعبة اللمس التفاعلي - ' + itemsSummary,
+      content_ids: items.map(i => i.variant),
       content_type: 'product',
-      num_items: qty,
+      num_items: units,
       value: totalValue,
       currency: 'DZD'
     });
     pixel('Lead', {
-      content_name: 'طلب COD - ' + names[currentVariant],
+      content_name: 'طلب COD - ' + itemsSummary,
       value: totalValue,
       currency: 'DZD'
     });
@@ -1149,7 +1194,7 @@
       const response = await fetch('/api/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, wilaya, city, address, variant: currentVariant, qty, shipping: shippingKey, idempotencyKey: orderIdempotencyKey })
+        body: JSON.stringify({ name, phone, wilaya, city, address, items, shipping: shippingKey, idempotencyKey: orderIdempotencyKey })
       });
       const result = await response.json();
 
