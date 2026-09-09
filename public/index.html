@@ -7,36 +7,28 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<!-- ============================================================
-     META (FACEBOOK/INSTAGRAM) PIXEL
-     Replace YOUR_PIXEL_ID below with the SAME Pixel ID connected
-     in Shopify (Shopify admin → Settings → Customer events →
-     Facebook & Instagram). Using the same ID means Meta stitches
-     this page's events together with your Shopify checkout events
-     into one funnel in Ads Manager.
-     ============================================================ -->
+<!-- Meta Pixel Code -->
 <script>
-  // Kept outside the try block on purpose: pixel() further down the page
-  // reads this constant, and a value declared with const inside a try{}
-  // would stay scoped to that block instead of the whole document.
-  const META_PIXEL_ID = '1558785505985427';
-  try {
-    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
-    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
-    document,'script','https://connect.facebook.net/en_US/fbevents.js');
-    if(META_PIXEL_ID !== 'YOUR_PIXEL_ID'){
-      fbq('init', META_PIXEL_ID);
-      fbq('track', 'PageView');
-    }
-  } catch(err){
-    console.warn('Meta Pixel failed to initialize:', err);
-  }
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1273690551381754');
+fbq('track', 'PageView');
 </script>
 <noscript><img height="1" width="1" style="display:none"
-  src="https://www.facebook.com/tr?id=1558785505985427&ev=PageView&noscript=1"
+src="https://www.facebook.com/tr?id=1273690551381754&ev=PageView&noscript=1"
 /></noscript>
+<!-- End Meta Pixel Code -->
+<script>
+  // pixel() and the advanced-matching re-init further down the page read
+  // this constant — kept in sync with the fbq('init', ...) call above.
+  const META_PIXEL_ID = '1273690551381754';
+</script>
 <style>
   :root{
     --ink:#2B1B33;
