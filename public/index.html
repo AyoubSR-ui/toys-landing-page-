@@ -16,15 +16,22 @@
      into one funnel in Ads Manager.
      ============================================================ -->
 <script>
-  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-  n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
-  n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
-  t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
-  document,'script','https://connect.facebook.net/en_US/fbevents.js');
+  // Kept outside the try block on purpose: pixel() further down the page
+  // reads this constant, and a value declared with const inside a try{}
+  // would stay scoped to that block instead of the whole document.
   const META_PIXEL_ID = '1558785505985427';
-  if(META_PIXEL_ID !== 'YOUR_PIXEL_ID'){
-    fbq('init', META_PIXEL_ID);
-    fbq('track', 'PageView');
+  try {
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+    document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    if(META_PIXEL_ID !== 'YOUR_PIXEL_ID'){
+      fbq('init', META_PIXEL_ID);
+      fbq('track', 'PageView');
+    }
+  } catch(err){
+    console.warn('Meta Pixel failed to initialize:', err);
   }
 </script>
 <noscript><img height="1" width="1" style="display:none"
@@ -956,9 +963,18 @@
 </div>
 
 <script>
-  function pixel(eventName, data){
-    if(typeof fbq === 'function' && META_PIXEL_ID !== 'YOUR_PIXEL_ID'){
-      fbq('track', eventName, data || {});
+  // A blocked/failed pixel script (ad blockers, network errors) must never
+  // throw here and must never interrupt the order flow that calls this.
+  function pixel(eventName, data, eventId){
+    try {
+      if(typeof fbq !== 'function' || META_PIXEL_ID === 'YOUR_PIXEL_ID') return;
+      if(eventId){
+        fbq('track', eventName, data || {}, { eventID: eventId });
+      } else {
+        fbq('track', eventName, data || {});
+      }
+    } catch(err){
+      console.warn('Pixel event failed:', eventName, err);
     }
   }
 
@@ -968,6 +984,13 @@
     mango: 'assets/mango.jpeg'
   };
   const names = { strawberry: 'فراولة', banana: 'موزة', mango: 'مانجو' };
+  // Keep in sync with the FlashManager SKUs in server.js — used only for
+  // the Pixel Purchase event's content_ids.
+  const VARIANT_IDS = {
+    strawberry: '48488634089666',
+    mango: '48488634056898',
+    banana: '48488634122434'
+  };
 
   // The hero "tap to hear music" preview is just decorative — it shows
   // whichever shape the visitor last tapped up top, independent of what
@@ -1091,11 +1114,24 @@
 
   // Product view — fires once everything above is ready
   pixel('ViewContent', {
-    content_name: 'لعبة اللمس التفاعلي - ' + names[previewVariant],
-    content_ids: [previewVariant],
     content_type: 'product',
-    value: price,
-    currency: 'DZD'
+    content_name: 'لعبة اللمس التفاعلي',
+    currency: 'DZD',
+    value: price
+  });
+
+  // InitiateCheckout — first sign of checkout intent: focusing the phone
+  // field or clicking any "اطلب الآن" order button. Fires once per page load.
+  let initiateCheckoutFired = false;
+  function fireInitiateCheckoutOnce(){
+    if(initiateCheckoutFired) return;
+    initiateCheckoutFired = true;
+    pixel('InitiateCheckout', {});
+  }
+  const phoneInputEl = document.getElementById('phone');
+  if(phoneInputEl) phoneInputEl.addEventListener('focus', fireInitiateCheckoutOnce, { once: true });
+  document.querySelectorAll('.header-cta, .btn-main, .sticky-cta a').forEach(btn => {
+    btn.addEventListener('click', fireInitiateCheckoutOnce);
   });
 
   document.querySelectorAll('#shippingSelect button').forEach(btn => {
@@ -1166,6 +1202,19 @@
     orderErrorMsg.style.display = 'none';
   }
 
+  // Converts a locally-entered Algerian number (e.g. "0660 19 19 19") to
+  // the international format Meta's Advanced Matching expects — digits
+  // only, no leading 0, prefixed with the country code. The SDK hashes
+  // this itself; we never hash anything manually. Never throws.
+  function toIntlPhone(rawPhone){
+    try {
+      const digitsOnly = (rawPhone || '').replace(/\D/g, '');
+      return '213' + digitsOnly.replace(/^0+/, '');
+    } catch(err){
+      return '';
+    }
+  }
+
   // Form submit
   // One idempotency key per page load, reused on every retry of this form
   // so a resubmission after a network hiccup can never create a duplicate
@@ -1195,15 +1244,7 @@
     const totalValue = price * units - discountFor(units) + shippingCost;
     const itemsSummary = items.map(i => names[i.variant] + ' × ' + i.qty).join(' + ');
 
-    // Fire before navigating away, so the event has time to send
-    pixel('InitiateCheckout', {
-      content_name: 'لعبة اللمس التفاعلي - ' + itemsSummary,
-      content_ids: items.map(i => i.variant),
-      content_type: 'product',
-      num_items: units,
-      value: totalValue,
-      currency: 'DZD'
-    });
+    // InitiateCheckout already fired earlier (phone focus / order button click).
     pixel('Lead', {
       content_name: 'طلب COD - ' + itemsSummary,
       value: totalValue,
@@ -1219,7 +1260,10 @@
     submitBtn.textContent = 'جاري إرسال الطلب...';
 
     const shippingKey = document.querySelector('#shippingSelect button.active')?.dataset.shipKey || 'home';
-    const orderBody = JSON.stringify({ name, phone, wilaya, city, address, items, shipping: shippingKey, idempotencyKey: orderIdempotencyKey });
+    // pixelEventId matches the eventID sent to fbq('track','Purchase',...)
+    // below, so a future server-side Conversions API event can be
+    // deduplicated against this same browser-side Pixel event.
+    const orderBody = JSON.stringify({ name, phone, wilaya, city, address, items, shipping: shippingKey, idempotencyKey: orderIdempotencyKey, pixelEventId: orderIdempotencyKey });
 
     // Sends the request, retrying once automatically if ANYTHING in the
     // attempt fails — the network request itself, OR reading/parsing the
@@ -1261,6 +1305,32 @@
         submitBtn.textContent = originalBtnText;
         return;
       }
+
+      // Advanced Matching — re-init with the customer's info right before
+      // Purchase so Meta can match this event to the visitor even without
+      // third-party cookies. The SDK hashes ph/ct itself; never hash manually.
+      try {
+        if(typeof fbq === 'function' && META_PIXEL_ID !== 'YOUR_PIXEL_ID'){
+          fbq('init', META_PIXEL_ID, {
+            ph: toIntlPhone(phone),
+            ct: city.toLowerCase().replace(/\s+/g, ''),
+            country: 'dz'
+          });
+        }
+      } catch(err){
+        console.warn('Pixel advanced matching init failed:', err);
+      }
+
+      // Purchase — only reached once the order request has come back
+      // successful. eventID lets a future server-side CAPI event dedupe
+      // against this one (see pixelEventId sent in the request above).
+      pixel('Purchase', {
+        value: totalValue,
+        currency: 'DZD',
+        content_ids: items.map(i => VARIANT_IDS[i.variant]),
+        content_type: 'product',
+        num_items: units
+      }, orderIdempotencyKey);
 
       this.style.display = 'none';
       document.querySelector('.order-form h3').style.display='none';
