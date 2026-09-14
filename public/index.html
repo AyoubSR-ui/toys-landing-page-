@@ -1292,6 +1292,11 @@ src="https://www.facebook.com/tr?id=1273690551381754&ev=PageView&noscript=1"
       }
 
       if(!response.ok || !result.ok){
+        // The Arabic message shown to the customer is always generic on
+        // purpose — but the server sends back the real reason (FlashManager's
+        // raw error body) in result.details. Log it so failures are actually
+        // debuggable from the browser console instead of just "تعذر إنشاء الطلب".
+        console.error('Order submission failed. Status:', response.status, 'Error:', result.error, 'Details:', result.details || '(none)');
         showOrderError(result.error || 'حدث خطأ أثناء إرسال الطلب. حاول مرة أخرى.');
         submitBtn.disabled = false;
         submitBtn.textContent = originalBtnText;
